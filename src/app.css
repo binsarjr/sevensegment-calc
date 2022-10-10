@@ -4,7 +4,7 @@
 
 @layer components {
     .mobile-view {
-        max-width: 485px;
+        max-width: 600px;
         margin: 0 auto;
     }
 }
