@@ -1,16 +1,21 @@
 <script>
   import { onMount } from "svelte";
+  import { element, text } from "svelte/internal";
   import Header from "./lib/components/Header.svelte";
   import Order from "./lib/components/Order.svelte";
-  let type = "common_anoda";
+  let type = null;
   let output = "";
-  const default_segment_orders = ["DP", "G", "F", "E", "D", "C", "B", "A"];
-  let segment_orders = default_segment_orders.slice();
+  const default_segment_orders = ["A", "B", "C", "D", "E", "F", "G", "DP"];
+  let segment_orders = null;
   let segment_indexs = [];
+
+  // Set default value is null
+  $: if (!type) type = "common_anoda";
+  $: if (!segment_orders || segment_orders.length === 0)
+    segment_orders = default_segment_orders.slice();
 
   function autoresize() {
     const textarea = document.getElementById("output");
-
     if (textarea) {
       textarea.style.height = "5px";
       textarea.style.height = textarea.scrollHeight + "px";
@@ -20,41 +25,71 @@
     autoresize();
   });
 
-  $: autoresize();
+  $: if (output) autoresize();
+  let seg_matrix = [
+    //a  b  c  d  e  f  g  dp
+    [1, 1, 1, 1, 1, 1, 0, 0], // 0
+    [0, 1, 1, 0, 0, 0, 0, 0], // 1
+    [1, 1, 0, 1, 1, 0, 1, 0], // 2
+    [1, 1, 1, 1, 0, 0, 1, 0], // 3
+    [0, 1, 1, 0, 0, 1, 1, 0], // 4
+    [1, 0, 1, 1, 0, 1, 1, 0], // 5
+    [1, 0, 1, 1, 1, 1, 1, 0], // 6
+    [1, 1, 1, 0, 0, 0, 0, 0], // 7
+    [1, 1, 1, 1, 1, 1, 1, 0], // 8
+    [1, 1, 1, 1, 0, 1, 1, 0], // 9
+  ];
 
   $: {
-    output = "";
-
-    let seg_matrix = [
-      //a  b  c  d  e  f  g  dp
-      [1, 1, 1, 1, 1, 1, 0, 0], // 0
-      [0, 1, 1, 0, 0, 0, 0, 0], // 1
-      [1, 1, 0, 1, 1, 0, 1, 0], // 2
-      [1, 1, 1, 1, 0, 0, 1, 0], // 3
-      [0, 1, 1, 0, 0, 1, 1, 0], // 4
-      [1, 0, 1, 1, 0, 1, 1, 0], // 5
-      [1, 0, 1, 1, 1, 1, 1, 0], // 6
-      [1, 1, 1, 0, 0, 0, 0, 0], // 7
-      [1, 1, 1, 1, 1, 1, 1, 0], // 8
-      [1, 1, 1, 1, 0, 1, 1, 0], // 9
-    ];
-    output = "uint8_t seg_table[] = {\n";
-    output += "\t//" + segment_orders.join(",") + "\n";
-    for (let i = 0; i < 10; i++) {
-      output += "\t0b";
-      if (type === "common_anoda") {
-        // common anode
-        for (let j = 0; j < 8; j++)
-          output += seg_matrix[i][segment_indexs[j]] * -1 + 1;
-      } else if (type === "common_cathoda") {
-        // common cathodes
-        for (let j = 0; j < 8; j++) output += seg_matrix[i][segment_indexs[j]];
+    function createOutput(varname, byteType) {
+      if (!["2", "10", "16"].includes(byteType.toString())) {
+        alert("Byte Type is only 2,10 and 16");
+        return "";
       }
+      let output = "";
+      output = `uint8_t ${varname}[] = {\n`;
+      output += `\t// Type: ${type}\n`;
+      if (byteType === 2) {
+        output += "\t// Biner\n";
+        output += "\t//" + segment_orders.join(",") + "\n";
+      } else if (byteType === 10) {
+        output += "\t// Decimal\n";
+      } else if (byteType === 16) {
+        output += "\t// Hexadecimal\n";
+      }
+      for (let i = 0; i < 10; i++) {
+        let biner = "";
+        if (type === "common_anoda") {
+          // common anode
+          for (let j = 0; j < 8; j++)
+            biner += seg_matrix[i][segment_indexs[j]] * -1 + 1;
+        } else if (type === "common_cathoda") {
+          // common cathodes
+          for (let j = 0; j < 8; j++) biner += seg_matrix[i][segment_indexs[j]];
+        }
 
-      if (i < 9) output += ",";
-      output += "\t // " + i + "\n";
+        if (byteType === 2) {
+          output += "\t0b" + biner;
+        } else if (byteType === 10) {
+          output += "\t" + parseInt(biner, 2).toString(10);
+        } else if (byteType === 16) {
+          output += "\t0x" + parseInt(biner, 2).toString(16);
+        }
+
+        if (i < 9) output += ",";
+        output += "\t // " + i + "\n";
+      }
+      output += "}";
+      return output;
     }
-    output += "}";
+    // Biner
+    output = createOutput("seg_table_biner", 2);
+    // Decimal
+    output += "\n\n";
+    output += createOutput("seq_table_decimal", 10);
+    // Hexa
+    output += "\n\n";
+    output += createOutput("seq_table_hexa", 16);
   }
 </script>
 
@@ -105,7 +140,8 @@
       <button
         class="px-4 py-2 bg-gray-50 rounded hover:bg-gray-200"
         on:click={() => {
-          segment_orders = default_segment_orders.slice();
+          segment_orders = null;
+          type = null;
         }}>Reset</button
       >
       <button
@@ -117,8 +153,10 @@
     </div>
   </div>
   <div class="bg-purple-200 text-center p-2">Output</div>
-  <textarea id="output" class="w-full p-2 rounded bg-purple-200"
-    >{output}</textarea
+  <textarea
+    id="output"
+    class="w-full p-2 rounded bg-purple-200"
+    on:input={autoresize}>{output}</textarea
   >
 </main>
 
