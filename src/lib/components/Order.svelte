@@ -7,7 +7,7 @@
     let options = "ABCDEFG".split("");
     options.push("DP");
 
-    options.map((option,i) => {
+    $: options.map((option,i) => {
         if(selected===option) index=i
     })
 </script>
