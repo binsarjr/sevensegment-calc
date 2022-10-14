@@ -28,6 +28,7 @@
   $: if (output) autoresize();
   let seg_matrix = [
     //a  b  c  d  e  f  g  dp
+    [0, 0, 0, 0, 0, 0, 0, 1], // .
     [1, 1, 1, 1, 1, 1, 0, 0], // 0
     [0, 1, 1, 0, 0, 0, 0, 0], // 1
     [1, 1, 0, 1, 1, 0, 1, 0], // 2
@@ -57,7 +58,7 @@
       } else if (byteType === 16) {
         output += "\t// Hexadecimal\n";
       }
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 11; i++) {
         let biner = "";
         if (type === "common_anoda") {
           // common anode
@@ -77,7 +78,8 @@
         }
 
         if (i < 9) output += ",";
-        output += "\t // " + i + "\n";
+        if (i === 0) output += "\t // .\n";
+        else output += "\t // " + (i - 1) + "\n";
       }
       output += "}";
       return output;
